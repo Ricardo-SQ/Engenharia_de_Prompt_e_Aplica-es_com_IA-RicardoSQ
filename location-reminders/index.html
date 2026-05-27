@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lembretes por Localização - Alarme GPS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBx4d3KgKQj8F7V7bW5Q9_8f9J0Z5K8C8s&libraries=places"></script>
+    <style>
+:root {
+    --primary-color: #191970;
+    --primary-dark: #0f0f4a;
+    --primary-light: #2d2d99;
+    --primary-lighter: #4a4ac9;
+    --accent-color: #00bfff;
+    --accent-light: #1edeff;
+    --success-color: #00ff00;
+    --warning-color: #ffa500;
+    --danger-color: #ff3333;
+    --text-color: #333;
+    --text-light: #666;
+    --text-lighter: #999;
+    --bg-color: #f5f5f5;
+    --card-bg: #ffffff;
+    --border-color: #ddd;
+    --shadow: 0 4px 6px rgba(25, 25, 112, 0.1);
+    --shadow-lg: 0 10px 30px rgba(25, 25, 112, 0.2);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    width: 100%;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f5f5f5 0%, #e8e8f0 100%);
+    color: var(--text-color);
+    line-height: 1.6;
+    overflow-x: hidden;
+    transition: all 0.3s ease;
+}
+
+body.tracking-enabled {
+    background: linear-gradient(135deg, #f0f0ff 0%, #e0e0ff 100%);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 15px;
+}
+
+header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    color: white;
+    padding: 35px 20px;
+    border-radius: 15px;
+    text-align: center;
+    margin-bottom: 30px;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+}
+
+header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transform: translate(50%, -50%);
+}
+
+header h1 {
+    font-size: clamp(1.8em, 5vw, 2.8em);
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
+}
+
+header p {
+    font-size: clamp(0.95em, 3vw, 1.2em);
+    opacity: 0.95;
+    position: relative;
+    z-index: 1;
+}
+
+section {
+    background: var(--card-bg);
+    padding: clamp(15px, 5vw, 30px);
+    margin-bottom: 25px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    border-left: 5px solid var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+section:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+section h2 {
+    color: var(--primary-color);
+    margin-bottom: 20px;
+    font-size: clamp(1.3em, 4vw, 1.8em);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.current-location {
+    background: linear-gradient(135deg, rgba(25, 25, 112, 0.03), rgba(0, 191, 255, 0.03));
+    border-left-color: var(--accent-color);
+}
+
+.location-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.location-item {
+    display: flex;
+    flex-direction: column;
+    padding: 18px;
+    background: var(--bg-color);
+    border-radius: 10px;
+    border: 2px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.location-item:hover {
+    border-color: var(--primary-color);
+    background: rgba(25, 25, 112, 0.02);
+    transform: translateY(-2px);
+}
+
+.location-item .label {
+    font-size: 0.85em;
+    color: var(--text-light);
+    margin-bottom: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.location-item .value {
+    font-size: 1.3em;
+    color: var(--primary-color);
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    word-break: break-all;
+}
+
+#tracking-stats {
+    background: rgba(25, 25, 112, 0.08);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+}
+
+.stat-label {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.stat-value {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.tracking-pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 0.95em;
+}
+
+input[type="text"],
+input[type="number"],
+textarea,
+select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1em;
+    font-family: inherit;
+    transition: all 0.3s ease;
+    background-color: #fafafa;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(25, 25, 112, 0.1), inset 0 0 0 1px rgba(25, 25, 112, 0.05);
+    background-color: #fff;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 85px;
+}
+
+input[type="checkbox"] {
+    margin-right: 10px;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary-color);
+    transition: all 0.2s ease;
+}
+
+input[type="checkbox"]:hover {
+    transform: scale(1.1);
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.btn:active {
+    transform: scale(0.95);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--primary-dark);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(25, 25, 112, 0.3);
+}
+
+.btn-secondary {
+    background-color: var(--accent-color);
+    color: var(--text-color);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: var(--accent-light);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(0, 191, 255, 0.3);
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    color: var(--text-color);
+}
+
+.btn-success:hover:not(:disabled) {
+    background-color: #00dd00;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(0, 255, 0, 0.3);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background-color: #ff1111;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(255, 51, 51, 0.3);
+}
+
+.btn-fill-current {
+    background-color: var(--primary-light);
+    color: white;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.btn-fill-current:hover {
+    background-color: var(--primary-color);
+    transform: translateY(-3px);
+}
+
+.tracking-active {
+    background-color: var(--danger-color) !important;
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0%, 100% { box-shadow: 0 8px 16px rgba(255, 51, 51, 0.3); }
+    50% { box-shadow: 0 8px 25px rgba(255, 51, 51, 0.6); }
+}
+
+/* Google Maps */
+#map-container {
+    margin: 20px 0;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+#map {
+    width: 100%;
+    height: 400px;
+}
+
+.map-info {
+    background: rgba(25, 25, 112, 0.08);
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+    font-size: 0.9em;
+    border-left: 4px solid var(--primary-color);
+}
+
+.map-info p {
+    margin: 8px 0;
+}
+
+.map-info strong {
+    color: var(--primary-color);
+}
+
+.search-location {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+#search-input {
+    padding: 12px 15px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1em;
+}
+
+.reminders-list {
+    border-left-color: var(--success-color);
+}
+
+.reminders-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.empty-message {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--text-light);
+    padding: 50px 20px;
+    font-size: 1.1em;
+}
+
+.reminder-card {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.reminder-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+}
+
+.reminder-card:hover::before {
+    transform: scaleX(1);
+}
+
+.reminder-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-6px);
+}
+
+.reminder-card.very-close {
+    border-color: var(--danger-color);
+    background: linear-gradient(135deg, rgba(255, 51, 51, 0.03), rgba(255, 51, 51, 0.05));
+}
+
+.reminder-card.close {
+    border-color: var(--warning-color);
+    background: linear-gradient(135deg, rgba(255, 165, 0, 0.03), rgba(255, 165, 0, 0.05));
+}
+
+.reminder-card.medium {
+    border-color: var(--accent-color);
+    background: linear-gradient(135deg, rgba(0, 191, 255, 0.03), rgba(0, 191, 255, 0.05));
+}
+
+.reminder-title {
+    font-size: 1.3em;
+    color: var(--primary-color);
+    font-weight: bold;
+    margin-bottom: 12px;
+    word-break: break-word;
+}
+
+.reminder-description {
+    color: var(--text-light);
+    margin-bottom: 15px;
+    font-size: 0.95em;
+    font-style: italic;
+}
+
+.reminder-details {
+    background: var(--bg-color);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-size: 0.9em;
+}
+
+.reminder-detail-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.reminder-detail-item:last-child {
+    margin-bottom: 0;
+}
+
+.reminder-detail-label {
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.reminder-detail-value {
+    color: var(--primary-color);
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    word-break: break-all;
+}
+
+.reminder-status {
+    display: inline-block;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 700;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-active {
+    background-color: rgba(0, 255, 0, 0.2);
+    color: #008800;
+}
+
+.status-triggered {
+    background-color: rgba(255, 165, 0, 0.2);
+    color: var(--warning-color);
+    animation: pulse 1.5s infinite;
+}
+
+.reminder-distance {
+    font-size: 0.95em;
+    padding: 12px 15px;
+    background: var(--bg-color);
+    border-radius: 8px;
+    color: var(--primary-color);
+    font-weight: bold;
+    margin-bottom: 15px;
+    text-align: center;
+    border-left: 4px solid var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.distance-very-close {
+    background: rgba(255, 51, 51, 0.1);
+    border-left-color: var(--danger-color);
+    color: var(--danger-color);
+    animation: pulse 1s infinite;
+}
+
+.distance-close {
+    background: rgba(255, 165, 0, 0.1);
+    border-left-color: var(--warning-color);
+    color: var(--warning-color);
+}
+
+.distance-medium {
+    background: rgba(0, 191, 255, 0.1);
+    border-left-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.distance-far {
+    background: rgba(25, 25, 112, 0.05);
+    border-left-color: var(--primary-color);
+    color: var(--text-light);
+}
+
+.reminder-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.reminder-actions .btn {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: 0.85em;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    animation: fadeIn 0.3s ease;
+    backdrop-filter: blur(5px);
+}
+
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: var(--card-bg);
+    padding: 40px;
+    border-radius: 16px;
+    max-width: 450px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.alarm-content {
+    border: 3px solid var(--primary-color);
+    background: linear-gradient(135deg, rgba(25, 25, 112, 0.05), rgba(0, 191, 255, 0.05));
+}
+
+.alarm-icon {
+    font-size: 5em;
+    margin-bottom: 20px;
+    animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-25px); }
+}
+
+.alarm-content h2 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    font-size: 2em;
+}
+
+.alarm-content p {
+    color: var(--text-light);
+    margin-bottom: 15px;
+    font-size: 1.1em;
+}
+
+.alarm-distance {
+    background: var(--bg-color);
+    padding: 18px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+}
+
+.alarm-distance p {
+    margin: 0;
+    color: var(--primary-color);
+    font-weight: bold;
+    font-size: 1.3em;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 25px;
+    flex-wrap: wrap;
+}
+
+.modal-buttons .btn {
+    flex: 1;
+    min-width: 140px;
+}
+
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 2000;
+    max-width: 420px;
+    pointer-events: none;
+}
+
+.toast {
+    background: var(--card-bg);
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    border-left: 5px solid var(--primary-color);
+    animation: slideInRight 0.3s ease;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    pointer-events: auto;
+    word-break: break-word;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+.toast.success { border-left-color: var(--success-color); }
+.toast.error { border-left-color: var(--danger-color); }
+.toast.warning { border-left-color: var(--warning-color); }
+.toast.info { border-left-color: var(--accent-color); }
+
+.toast-icon {
+    font-size: 1.4em;
+    min-width: 24px;
+    min-height: 24px;
+}
+
+.toast-message {
+    flex: 1;
+    color: var(--text-color);
+    font-size: 0.95em;
+}
+
+@media (max-width: 768px) {
+    .container { padding: 12px; }
+    header { padding: 25px 15px; margin-bottom: 20px; }
+    header h1 { font-size: 1.8em; }
+    section { padding: 18px 15px; margin-bottom: 18px; }
+    .location-info { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+    .reminders-container { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+    .form-row { grid-template-columns: 1fr; }
+    .btn { padding: 11px 18px; font-size: 0.9em; }
+    #map { height: 300px; }
+}
+
+@media (max-width: 480px) {
+    .container { padding: 8px; }
+    header { padding: 20px 10px; }
+    header h1 { font-size: 1.5em; }
+    section { padding: 12px 10px; }
+    .location-info { grid-template-columns: 1fr; }
+    .reminders-container { grid-template-columns: 1fr; }
+    .btn { padding: 10px 14px; font-size: 0.85em; }
+    #map { height: 250px; }
+    .search-location { grid-template-columns: 1fr; }
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📍 Lembretes por Localização</h1>
+            <p>Receba alarmes quando chegar próximo a um local</p>
+        </header>
+
+        <section class="current-location">
+            <h2>Sua Localização Atual</h2>
+            <div class="location-info">
+                <div class="location-item">
+                    <span class="label">Latitude:</span>
+                    <span id="latitude" class="value">--</span>
+                </div>
+                <div class="location-item">
+                    <span class="label">Longitude:</span>
+                    <span id="longitude" class="value">--</span>
+                </div>
+                <div class="location-item">
+                    <span class="label">Precisão:</span>
+                    <span id="accuracy" class="value">--</span>
+                </div>
+            </div>
+            <div id="tracking-stats"></div>
+            <button id="btn-update-location" class="btn btn-primary">🔄 Atualizar Localização</button>
+            <button id="btn-enable-tracking" class="btn btn-secondary">📡 Ativar Rastreamento</button>
+        </section>
+
+        <section class="create-reminder">
+            <h2>Criar Novo Lembrete</h2>
+            
+            <!-- Google Maps Integration -->
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: var(--primary-color); margin-bottom: 15px; font-size: 1.1em;">Selecionar Local no Mapa</h3>
+                <div class="search-location">
+                    <input type="text" id="search-input" placeholder="Pesquisar local..." />
+                    <button class="btn btn-secondary" id="btn-use-current-map">📍 Usar Atual</button>
+                </div>
+                <div id="map-container">
+                    <div id="map"></div>
+                </div>
+                <div class="map-info">
+                    <p><strong>📌 Clique no mapa</strong> para selecionar o local do lembrete</p>
+                    <p><strong>Coordenadas Selecionadas:</strong></p>
+                    <p>Latitude: <span id="map-latitude" style="color: var(--primary-color); font-weight: bold;">--</span></p>
+                    <p>Longitude: <span id="map-longitude" style="color: var(--primary-color); font-weight: bold;">--</span></p>
+                </div>
+            </div>
+
+            <form id="reminder-form">
+                <div class="form-group">
+                    <label for="reminder-title">Título do Lembrete:</label>
+                    <input 
+                        type="text" 
+                        id="reminder-title" 
+                        placeholder="Ex: Ir ao supermercado" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="reminder-description">Descrição:</label>
+                    <textarea 
+                        id="reminder-description" 
+                        placeholder="Detalhes adicionais..." 
+                        rows="3"
+                    ></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="reminder-latitude">Latitude do Local:</label>
+                        <input 
+                            type="number" 
+                            id="reminder-latitude" 
+                            step="0.000001" 
+                            placeholder="Ex: -23.550520" 
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reminder-longitude">Longitude do Local:</label>
+                        <input 
+                            type="number" 
+                            id="reminder-longitude" 
+                            step="0.000001" 
+                            placeholder="Ex: -46.633309" 
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="reminder-radius">Raio de Ativação (metros):</label>
+                        <input 
+                            type="number" 
+                            id="reminder-radius" 
+                            min="10" 
+                            max="5000" 
+                            value="500" 
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reminder-type">Tipo de Alarme:</label>
+                        <select id="reminder-type" required>
+                            <option value="sound">🔔 Som</option>
+                            <option value="vibration">📳 Vibração</option>
+                            <option value="both">🔔📳 Som + Vibração</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="reminder-repeat" checked>
+                        Repetir lembrete ao chegar próximo
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-success">➕ Adicionar Lembrete</button>
+            </form>
+        </section>
+
+        <section class="reminders-list">
+            <h2>Lembretes Ativos</h2>
+            <div id="reminders-container" class="reminders-container">
+                <p class="empty-message">Nenhum lembrete criado ainda.</p>
+            </div>
+        </section>
+    </div>
+
+    <div id="alarm-modal" class="modal">
+        <div class="modal-content alarm-content">
+            <div class="alarm-icon">🚨</div>
+            <h2 id="alarm-title">Alarme!</h2>
+            <p id="alarm-message">Você chegou próximo ao local do lembrete!</p>
+            <div class="alarm-distance">
+                <p>Distância: <span id="alarm-distance">--</span> metros</p>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="dismissAlarm()">Descartar</button>
+                <button class="btn btn-secondary" onclick="snoozeAlarm()">Adiar 5 min</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <script>
+// Estado Global
+const state = {
+    currentLocation: { latitude: null, longitude: null, accuracy: null, timestamp: null },
+    selectedLocation: { latitude: null, longitude: null },
+    map: null,
+    marker: null,
+    reminders: [],
+    tracking: false,
+    watchId: null,
+    triggeredReminders: new Set(),
+    locationHistory: []
+};
+
+// Inicialização
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Aplicação iniciada');
+    loadRemindersFromStorage();
+    renderReminders();
+    setupEventListeners();
+    requestLocationPermission();
+    initMap();
+});
+
+function setupEventListeners() {
+    document.getElementById('btn-update-location').addEventListener('click', updateLocation);
+    document.getElementById('btn-enable-tracking').addEventListener('click', toggleTracking);
+    document.getElementById('reminder-form').addEventListener('submit', handleReminderSubmit);
+    document.getElementById('btn-use-current-map').addEventListener('click', useCurrentLocation);
+    
+    // Autocomplete para busca de locais
+    const searchInput = document.getElementById('search-input');
+    const autocomplete = new google.maps.places.Autocomplete(searchInput);
+    autocomplete.bindTo('bounds', state.map);
+    
+    autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry) {
+            showToast('Por favor, selecione um local válido', 'warning');
+            return;
+        }
+        
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        
+        setMapLocation(lat, lng);
+        updateMapCoordinates(lat, lng);
+        showToast(`✅ Local selecionado: ${place.formatted_address}`, 'success');
+    });
+}
+
+// Google Maps
+function initMap() {
+    const defaultLocation = { lat: -23.550520, lng: -46.633309 }; // São Paulo
+    
+    state.map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 15,
+        center: defaultLocation,
+        mapTypeControl: true,
+        fullscreenControl: true,
+        streetViewControl: true,
+        zoomControl: true
+    });
+
+    state.marker = new google.maps.Marker({
+        map: state.map,
+        position: defaultLocation,
+        title: 'Clique para selecionar ou arraste'
+    });
+
+    state.map.addListener('click', (e) => {
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
+        setMapLocation(lat, lng);
+        updateMapCoordinates(lat, lng);
+        showToast('📍 Local selecionado do mapa!', 'success');
+    });
+
+    state.marker.addListener('dragend', () => {
+        const lat = state.marker.getPosition().lat();
+        const lng = state.marker.getPosition().lng();
+        updateMapCoordinates(lat, lng);
+        showToast('📍 Marcador movido!', 'info');
+    });
+
+    state.marker.setDraggable(true);
+}
+
+function setMapLocation(lat, lng) {
+    state.map.setCenter({ lat, lng });
+    state.marker.setPosition({ lat, lng });
+    state.selectedLocation = { latitude: lat, longitude: lng };
+}
+
+function updateMapCoordinates(lat, lng) {
+    state.selectedLocation = { latitude: lat, longitude: lng };
+    document.getElementById('map-latitude').textContent = lat.toFixed(6);
+    document.getElementById('map-longitude').textContent = lng.toFixed(6);
+    
+    // Atualiza os campos do formulário
+    document.getElementById('reminder-latitude').value = lat.toFixed(6);
+    document.getElementById('reminder-longitude').value = lng.toFixed(6);
+}
+
+function useCurrentLocation() {
+    if (!state.currentLocation.latitude) {
+        showToast('⚠️ Clique em "Atualizar Localização" primeiro', 'warning');
+        return;
+    }
+    
+    const lat = state.currentLocation.latitude;
+    const lng = state.currentLocation.longitude;
+    setMapLocation(lat, lng);
+    updateMapCoordinates(lat, lng);
+    showToast('✅ Sua localização atual foi selecionada no mapa!', 'success');
+}
+
+// Geolocalização
+function updateLocation() {
+    if (!navigator.geolocation) {
+        showToast('Geolocalização não suportada no seu navegador', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('btn-update-location');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Localizando...';
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const { latitude, longitude, accuracy } = position.coords;
+            
+            state.currentLocation = {
+                latitude,
+                longitude,
+                accuracy: Math.round(accuracy),
+                timestamp: new Date()
+            };
+            
+            state.locationHistory.push({
+                ...state.currentLocation,
+                time: new Date().toISOString()
+            });
+            
+            updateLocationDisplay();
+            showToast(`✅ Localização atualizada! Precisão: ${Math.round(accuracy)}m`, 'success');
+            checkRemindersDistance();
+            
+            btn.disabled = false;
+            btn.innerHTML = '🔄 Atualizar Localização';
+        },
+        (error) => {
+            let errorMsg = 'Erro ao obter localização';
+            if (error.code === error.PERMISSION_DENIED) {
+                errorMsg = 'Permissão negada. Ative nas configurações.';
+            }
+            showToast(errorMsg, 'error');
+            btn.disabled = false;
+            btn.innerHTML = '🔄 Atualizar Localização';
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+}
+
+function toggleTracking() {
+    if (state.tracking) stopTracking();
+    else startTracking();
+}
+
+function startTracking() {
+    if (!navigator.geolocation) {
+        showToast('Geolocalização não suportada', 'error');
+        return;
+    }
+
+    showToast('🚀 Iniciando rastreamento contínuo...', 'info');
+    updateLocation();
+
+    state.watchId = navigator.geolocation.watchPosition(
+        (position) => {
+            const { latitude, longitude, accuracy } = position.coords;
+            const newLocation = {
+                latitude,
+                longitude,
+                accuracy: Math.round(accuracy),
+                timestamp: new Date()
+            };
+            
+            if (hasSignificantMovement(state.currentLocation, newLocation)) {
+                state.currentLocation = newLocation;
+                state.locationHistory.push({ ...newLocation, time: new Date().toISOString() });
+                if (state.locationHistory.length > 100) state.locationHistory.shift();
+                
+                updateLocationDisplay();
+                checkRemindersDistance();
+            }
+        },
+        (error) => console.error('Erro no rastreamento:', error),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+
+    state.tracking = true;
+    updateTrackingButton();
+    updateTrackingStats();
+    showToast('✅ Rastreamento ativo!', 'success');
+}
+
+function stopTracking() {
+    if (state.watchId !== null) {
+        navigator.geolocation.clearWatch(state.watchId);
+        state.watchId = null;
+    }
+    state.tracking = false;
+    updateTrackingButton();
+    updateTrackingStats();
+    showToast('⏹️ Rastreamento parado', 'info');
+}
+
+function hasSignificantMovement(oldLocation, newLocation) {
+    if (!oldLocation.latitude || !oldLocation.longitude) return true;
+    const distance = calculateDistance(oldLocation.latitude, oldLocation.longitude, newLocation.latitude, newLocation.longitude);
+    return distance > 5;
+}
+
+function updateLocationDisplay() {
+    const { latitude, longitude, accuracy } = state.currentLocation;
+    if (latitude !== null && longitude !== null) {
+        document.getElementById('latitude').textContent = latitude.toFixed(6);
+        document.getElementById('longitude').textContent = longitude.toFixed(6);
+        document.getElementById('accuracy').textContent = accuracy ? `${accuracy}m` : '--';
+    }
+}
+
+function updateTrackingButton() {
+    const btn = document.getElementById('btn-enable-tracking');
+    if (state.tracking) {
+        btn.textContent = '⏹️ Parar Rastreamento';
+        btn.classList.add('tracking-active');
+        document.body.classList.add('tracking-enabled');
+    } else {
+        btn.textContent = '📡 Ativar Rastreamento';
+        btn.classList.remove('tracking-active');
+        document.body.classList.remove('tracking-enabled');
+    }
+}
+
+function updateTrackingStats() {
+    const statsEl = document.getElementById('tracking-stats');
+    if (state.tracking) {
+        statsEl.innerHTML = `
+            <div class="stat-item">
+                <span class="stat-label">📊 Localizações:</span>
+                <span class="stat-value">${state.locationHistory.length}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">⏱️ Status:</span>
+                <span class="stat-value tracking-pulse">Rastreando...</span>
+            </div>
+        `;
+    } else {
+        statsEl.innerHTML = '';
+    }
+}
+
+function requestLocationPermission() {
+    if (!navigator.geolocation) {
+        showToast('Seu navegador não suporta geolocalização', 'warning');
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            state.currentLocation = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: Math.round(position.coords.accuracy),
+                timestamp: new Date()
+            };
+            updateLocationDisplay();
+            showToast('✅ Permissão de localização concedida!', 'success');
+        },
+        (error) => {
+            if (error.code === error.PERMISSION_DENIED) {
+                showToast('❌ Permissão negada. Ative nas configurações.', 'warning');
+            }
+        },
+        { timeout: 5000 }
+    );
+}
+
+// Formulário
+function handleReminderSubmit(e) {
+    e.preventDefault();
+
+    const title = document.getElementById('reminder-title').value.trim();
+    const description = document.getElementById('reminder-description').value.trim();
+    const latitude = parseFloat(document.getElementById('reminder-latitude').value);
+    const longitude = parseFloat(document.getElementById('reminder-longitude').value);
+    const radius = parseInt(document.getElementById('reminder-radius').value);
+    const type = document.getElementById('reminder-type').value;
+    const repeat = document.getElementById('reminder-repeat').checked;
+
+    if (!title) {
+        showToast('Por favor, preencha o título', 'error');
+        return;
+    }
+
+    if (isNaN(latitude) || isNaN(longitude)) {
+        showToast('Coordenadas inválidas', 'error');
+        return;
+    }
+
+    const reminder = {
+        id: Date.now(),
+        title, description,
+        location: { latitude, longitude },
+        radius, type, repeat,
+        createdAt: new Date().toISOString(),
+        status: 'active',
+        lastTriggered: null,
+        distance: null
+    };
+
+    state.reminders.push(reminder);
+    saveRemindersToStorage();
+    renderReminders();
+    document.getElementById('reminder-form').reset();
+    showToast('✅ Lembrete adicionado!', 'success');
+}
+
+// Cálculos
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return Math.round(R * c);
+}
+
+function checkRemindersDistance() {
+    if (!state.currentLocation.latitude) return;
+
+    const { latitude: userLat, longitude: userLon } = state.currentLocation;
+
+    state.reminders.forEach((reminder) => {
+        const { location, radius, id, repeat } = reminder;
+        const distance = calculateDistance(userLat, userLon, location.latitude, location.longitude);
+        
+        reminder.distance = distance;
+
+        if (distance <= radius && !state.triggeredReminders.has(id)) {
+            triggerAlarm(reminder, distance);
+            state.triggeredReminders.add(id);
+
+            if (!repeat) {
+                setTimeout(() => state.triggeredReminders.delete(id), 5 * 60 * 1000);
+            }
+        } else if (distance > radius + 100) {
+            state.triggeredReminders.delete(id);
+            if (reminder.status === 'triggered') reminder.status = 'active';
+        }
+    });
+
+    renderReminders();
+}
+
+function triggerAlarm(reminder, distance) {
+    reminder.status = 'triggered';
+    reminder.lastTriggered = new Date().toISOString();
+
+    showAlarmModal(reminder, distance);
+    playAlarmSound(reminder.type, distance);
+    if (reminder.type !== 'sound') vibrate();
+    sendBrowserNotification(reminder, distance);
+}
+
+function playAlarmSound(type, distance) {
+    if (type === 'sound' || type === 'both') {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const frequency = distance < 100 ? 1000 : distance < 300 ? 800 : 600;
+            const duration = distance < 100 ? 0.7 : 0.5;
+            
+            for (let i = 0; i < (distance < 100 ? 3 : 1); i++) {
+                setTimeout(() => {
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioContext.destination);
+                    osc.frequency.value = frequency + (i * 100);
+                    osc.type = 'sine';
+                    gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+                    osc.start(audioContext.currentTime);
+                    osc.stop(audioContext.currentTime + duration);
+                }, i * (duration * 1000 + 200));
+            }
+        } catch (e) {
+            console.error('Erro ao reproduzir som:', e);
+        }
+    }
+}
+
+function vibrate() {
+    if ('vibrate' in navigator) navigator.vibrate([100, 100, 100, 100, 100, 100]);
+}
+
+function showAlarmModal(reminder, distance) {
+    const modal = document.getElementById('alarm-modal');
+    document.getElementById('alarm-title').textContent = reminder.title;
+    document.getElementById('alarm-message').textContent = reminder.description || 'Você chegou próximo!';
+    document.getElementById('alarm-distance').textContent = `${distance}m`;
+    modal.classList.add('show');
+    setTimeout(() => dismissAlarm(), 10000);
+}
+
+function dismissAlarm() {
+    document.getElementById('alarm-modal').classList.remove('show');
+}
+
+function snoozeAlarm() {
+    dismissAlarm();
+    showToast('⏸️ Adiado por 5 minutos', 'info');
+    const reminder = state.reminders.find(r => r.status === 'triggered');
+    if (reminder) {
+        state.triggeredReminders.delete(reminder.id);
+        reminder.status = 'active';
+        renderReminders();
+    }
+}
+
+function sendBrowserNotification(reminder, distance) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(`🚨 ${reminder.title}`, {
+            body: `Você está a ${distance}m!`,
+            icon: '📍',
+            tag: `reminder-${reminder.id}`,
+            requireInteraction: true
+        });
+    }
+}
+
+function renderReminders() {
+    const container = document.getElementById('reminders-container');
+    if (!state.reminders.length) {
+        container.innerHTML = '<p class="empty-message">Nenhum lembrete criado ainda!</p>';
+        return;
+    }
+
+    const sorted = [...state.reminders].sort((a, b) => {
+        if (!a.distance) return 1;
+        if (!b.distance) return -1;
+        return a.distance - b.distance;
+    });
+
+    container.innerHTML = sorted.map(reminder => `
+        <div class="reminder-card ${getDistanceClass(reminder.distance)}" data-reminder-id="${reminder.id}">
+            <div class="reminder-status status-${reminder.status}">${getStatusLabel(reminder.status)}</div>
+            <div class="reminder-title">${escapeHtml(reminder.title)}</div>
+            ${reminder.description ? `<div class="reminder-description">${escapeHtml(reminder.description)}</div>` : ''}
+            <div class="reminder-details">
+                <div class="reminder-detail-item">
+                    <span class="reminder-detail-label">📍 Local:</span>
+                    <span class="reminder-detail-value">${reminder.location.latitude.toFixed(4)}, ${reminder.location.longitude.toFixed(4)}</span>
+                </div>
+                <div class="reminder-detail-item">
+                    <span class="reminder-detail-label">📋 Raio:</span>
+                    <span class="reminder-detail-value">${reminder.radius}m</span>
+                </div>
+                <div class="reminder-detail-item">
+                    <span class="reminder-detail-label">🔔 Alarme:</span>
+                    <span class="reminder-detail-value">${getAlarmTypeLabel(reminder.type)}</span>
+                </div>
+            </div>
+            <div class="reminder-distance distance-${getDistanceClass(reminder.distance)}">
+                Distância: ${reminder.distance !== null ? `${reminder.distance}m` : '--'}
+            </div>
+            <div class="reminder-actions">
+                <button class="btn btn-secondary" onclick="editReminder(${reminder.id})">✏️ Editar</button>
+                <button class="btn btn-danger" onclick="deleteReminder(${reminder.id})">🗑️ Deletar</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getDistanceClass(distance) {
+    if (!distance) return 'unknown';
+    if (distance < 100) return 'very-close';
+    if (distance < 300) return 'close';
+    if (distance < 1000) return 'medium';
+    return 'far';
+}
+
+function getStatusLabel(status) {
+    return { 'active': '✅ Ativo', 'triggered': '🚨 Disparado', 'snoozed': '⏸️ Adiado' }[status] || status;
+}
+
+function getAlarmTypeLabel(type) {
+    return { 'sound': '🔔 Som', 'vibration': '📳 Vibração', 'both': '🔔📳 Som + Vibração' }[type] || type;
+}
+
+function deleteReminder(id) {
+    const reminder = state.reminders.find(r => r.id === id);
+    if (confirm(`Deletar "${reminder.title}"?`)) {
+        state.reminders = state.reminders.filter(r => r.id !== id);
+        state.triggeredReminders.delete(id);
+        saveRemindersToStorage();
+        renderReminders();
+        showToast('🗑️ Deletado', 'info');
+    }
+}
+
+function editReminder(id) {
+    const reminder = state.reminders.find(r => r.id === id);
+    if (!reminder) return;
+    
+    document.getElementById('reminder-title').value = reminder.title;
+    document.getElementById('reminder-description').value = reminder.description;
+    document.getElementById('reminder-latitude').value = reminder.location.latitude;
+    document.getElementById('reminder-longitude').value = reminder.location.longitude;
+    document.getElementById('reminder-radius').value = reminder.radius;
+    document.getElementById('reminder-type').value = reminder.type;
+    document.getElementById('reminder-repeat').checked = reminder.repeat;
+    
+    deleteReminder(id);
+    document.querySelector('.create-reminder').scrollIntoView({ behavior: 'smooth' });
+}
+
+function saveRemindersToStorage() {
+    localStorage.setItem('reminders', JSON.stringify(state.reminders));
+}
+
+function loadRemindersFromStorage() {
+    const saved = localStorage.getItem('reminders');
+    if (saved) {
+        try {
+            state.reminders = JSON.parse(saved);
+        } catch (e) {
+            console.error('Erro ao carregar:', e);
+        }
+    }
+}
+
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <span class="toast-icon">${{'success': '✅', 'error': '❌', 'warning': '⚠️', 'info': 'ℹ️'}[type]}</span>
+        <span class="toast-message">${escapeHtml(message)}</span>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+window.addEventListener('beforeunload', () => {
+    if (state.tracking) stopTracking();
+});
+
+setInterval(() => {
+    if (state.tracking && state.currentLocation.latitude) {
+        checkRemindersDistance();
+    }
+}, 5000);
+    </script>
+</body>
+</html>
