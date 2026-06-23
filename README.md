@@ -18,9 +18,9 @@ Descreva aqui o desafio proposto pelo grupo (ex.: cadastro de usuários, automa�
 
 ## ⚙️ Plataforma Utilizada
 
-- Nome da plataforma (ex.: Bubble, Make, Pipedream).
+- Nome da plataforma GitHub Copilot (Claude Haiku 4.5)
 
-- Justificativa da escolha: por que essa ferramenta foi selecionada para o desafio?
+- Justificativa da escolha: foi a plataforma do qual eu mais entendi o funcionamento e soube manusear.
 
 ---
 
@@ -28,11 +28,11 @@ Descreva aqui o desafio proposto pelo grupo (ex.: cadastro de usuários, automa�
 
 Liste pelo menos **3 vantagens** percebidas no uso da abordagem low code/no code/vibecode:
 
-1. Protótipo rápido
+1. Velocidade da criação do site
 
-2. Integração simples
+2. Simplicidade
 
-3. Automação de processos
+3. Custo 0 para criação
 
 ---
 
@@ -40,23 +40,23 @@ Liste pelo menos **3 vantagens** percebidas no uso da abordagem low code/no code
 
 Liste pelo menos **3 limitações** percebidas:
 
-1. Customização limitada
+1. Limitação da quantidade de comandos por dia
 
-2. Dependência da plataforma
+2. Lógica inumana de uso (necessita das coordenadas do local)
 
-3. Risco de lock-in tecnológico
+3. Interpretação errônea do comando
 
 ---
 
 ## 📚 Reflexão Crítica
 
-Explique como o grupo lidou com as limitações e quais soluções criativas foram propostas para contorná-las.
+Otimizar os comandos para abrangerem a solução do maior número de erros de uma só vez com comandos menores e exemplificar com sistemas eficazes de outros apps/sites que contenham algum sistema semelhante (por exemplo a escolha no mapa do Uber).
 
 ---
 
 ## 👥 Colaboração
 
-Descreva como o grupo organizou as tarefas e responsabilidades entre os integrantes.
+Ricardo Silva Queiroz
 
 ---
 
